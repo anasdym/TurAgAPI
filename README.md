@@ -40,9 +40,8 @@ Tabela trips jest tworzona automatycznie przy pierwszym uruchomieniu aplikacji.
 
 Pola: id, destination, month, price_pln
 
----
 
-🌐 Endpointy API
+## 🌐 Endpointy API
 
 ✅ GET /health
 Szybkie sprawdzenie statusu aplikacji.
@@ -95,5 +94,7 @@ Parametry:
 Przykład:
 /trips/Paryż?currency=USD
 
-📝 Licencja
+## 📝 Licencja
 Projekt edukacyjny. Możesz używać, modyfikować i rozbudowywać bez ograniczeń.
+
+Zadanie: https://mhyla.com/jica-python11/#mini-projekt-proste-api-biuro-podr%C3%B3%C5%BCy-2-osobowe-zespo%C5%82y
