@@ -50,13 +50,16 @@ def insert(destination, month, price_pln):
 # Funkcja zwracająca wszystkie wpisy
 def select_all():
     with sqlite3.connect(DB_NAME) as conn:
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM trips')
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
 # Funkcja zwracająca wpisy filtrowane po destination
 def select_by_destination(destination):
     with sqlite3.connect(DB_NAME) as conn:
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute('''
             SELECT * FROM trips
@@ -80,4 +83,12 @@ def create_trip(trip: TripIn):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/trips")
+def list_trips():
+    trips = select_all()
+    return {"trips": trips}
 
+@app.get("/trips/{destination}")
+def list_trips_by_destination(destination: str):
+    tripsDest = select_by_destination(destination)
+    return {"trips": tripsDest}
