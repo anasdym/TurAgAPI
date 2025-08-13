@@ -27,11 +27,13 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 lub
 python -m uvicorn app:app --reload
+```
 
 Aplikacja będzie dostępna pod adresem: http://127.0.0.1:8000
 Dokumentacja Swagger UI: http://127.0.0.1:8000/docs
 
-💾 Baza danych
+## 💾 Baza danych
+
 Dane są przechowywane lokalnie w pliku travel.db (SQLite).
 
 Tabela trips jest tworzona automatycznie przy pierwszym uruchomieniu aplikacji.
