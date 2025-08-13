@@ -1,17 +1,18 @@
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 import json
 import requests
 import os
 import sqlite3
 
-app = FastAPI()
+class TripIn(BaseModel):
+    destination: str = Field(..., min_length=1)
+    month: str = Field(..., min_length=1)
+    price_pln: float = Field(..., ge=0)
 
-# Dodanie endpointu /health zwracającego prosty status.
-@app.get("/health")
-def status():
-   return {"status": "ok"}
+class TripOut(TripIn):
+    id: int
 
 # Sprawdzenie plika travel.db i tworzenie tabela
 DB_NAME = "travel.db"
@@ -55,3 +56,19 @@ def select_by_destination(destination):
             WHERE LOWER(destination) = LOWER(?)
         ''', (destination,))
         return cursor.fetchall()
+
+app = FastAPI()
+
+# Dodanie endpointu /health zwracającego prosty status.
+@app.get("/health")
+def status():
+    return {"status": "ok"}
+
+@app.post("/trips", response_model=TripOut, status_code=201)
+def create_trip(trip: TripIn):
+    try:
+        result = insert(trip.destination, trip.month, trip.price_pln)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
