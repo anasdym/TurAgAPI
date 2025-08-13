@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, validator
@@ -49,23 +51,46 @@ def insert(destination, month, price_pln):
 
 # Funkcja zwracająca wszystkie wpisy
 def select_all():
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM trips')
-        rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM trips')
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Błąd bazy danych: {str(e)}")
 
 # Funkcja zwracająca wpisy filtrowane po destination
 def select_by_destination(destination):
-    with sqlite3.connect(DB_NAME) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT * FROM trips
-            WHERE LOWER(destination) = LOWER(?)
-        ''', (destination,))
-        return cursor.fetchall()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT * FROM trips
+                WHERE LOWER(destination) = LOWER(?)
+            ''', (destination,))
+            return cursor.fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Błąd bazy danych: {str(e)}")
+
+def exchange(currency_code: str) -> float:
+    if currency_code.upper() == "PLN":
+        return 1.0  # Kurs PLN do PLN to zawsze 1
+    url = f"https://api.nbp.pl/api/exchangerates/rates/A/{currency_code.upper()}/?format=json"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        return data['rates'][0]['mid']
+    except requests.RequestException:
+        raise HTTPException(status_code=400, detail="Błąd połączenia z API NBP.")
+    except (KeyError, IndexError):
+        raise HTTPException(status_code=400, detail="Nieobsługiwany kod waluty.")
+
+def convert_price(price_pln: float, rate: float) -> float:
+    return round(price_pln / rate, 2)
 
 app = FastAPI()
 
@@ -83,12 +108,29 @@ def create_trip(trip: TripIn):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/trips")
-def list_trips():
+@app.get("/trips}")
+def list_trips(currency: Optional[str] = "PLN"):
     trips = select_all()
+    rate = exchange(currency)
+
+    for trip in trips:
+        trip["price"] = str(convert_price(float(trip["price_pln"]), rate))
+        trip["currency"] = currency.upper()
+        del trip["price_pln"]
+
     return {"trips": trips}
 
 @app.get("/trips/{destination}")
-def list_trips_by_destination(destination: str):
-    tripsDest = select_by_destination(destination)
-    return {"trips": tripsDest}
+def destination_trips(destination: str, currency: Optional[str] = "PLN"):
+    rows = select_by_destination(destination)
+    rate = exchange(currency)
+    trips = []
+
+    for row in rows:
+        trip = dict(row)
+        trip["price"] = str(convert_price(float(trip["price_pln"]), rate))
+        trip["currency"] = currency.upper()
+        del trip["price_pln"]
+        trips.append(trip)
+
+    return {"trips": trips}
