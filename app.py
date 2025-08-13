@@ -39,6 +39,13 @@ def insert(destination, month, price_pln):
             VALUES (?, ?, ?)
         ''', (destination, month, price_pln))
         conn.commit()
+        trip_id = cursor.lastrowid
+        return {
+            "id": trip_id,
+            "destination": destination,
+            "month": month,
+            "price_pln": price_pln
+        }
 
 # Funkcja zwracająca wszystkie wpisy
 def select_all():
@@ -65,10 +72,12 @@ def status():
     return {"status": "ok"}
 
 @app.post("/trips", response_model=TripOut, status_code=201)
+#@app.post("/trips")
 def create_trip(trip: TripIn):
     try:
         result = insert(trip.destination, trip.month, trip.price_pln)
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
