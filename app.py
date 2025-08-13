@@ -108,7 +108,7 @@ def create_trip(trip: TripIn):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/trips}")
+@app.get("/trips")
 def list_trips(currency: Optional[str] = "PLN"):
     trips = select_all()
     rate = exchange(currency)
